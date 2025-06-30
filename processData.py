@@ -68,7 +68,7 @@ def load_and_concat_npz(folder,
         api_url = (
             "https://api.github.com/repos/"
             "HolyUncleLi/TestInterpretTrainer"
-            "/SleepEdfData/SCDataset/data"
+            "/SleepEdfData/SCDataSet/data"
         )
         os.makedirs(folder, exist_ok=True)
         r = requests.get(api_url)

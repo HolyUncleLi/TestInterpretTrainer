@@ -21,7 +21,7 @@ seq_len = 1
 LEARNING_RATE = 0.0005
 use_gpu = torch.cuda.is_available()
 
-folder = "./SleepEdfData/SCDataset/data/"
+folder = "./SleepEdfData/SCDataSet/data/"
 # h5file = "./SleepEdfData/SCDataset/data/"
 model_path = ""
 # files = os.listdir(h5file)
