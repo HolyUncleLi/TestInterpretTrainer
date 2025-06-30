@@ -9,6 +9,7 @@ import torch.utils.data as Data
 import pandas as pd
 import random
 import glob
+import requests
 
 
 use_gpu = torch.cuda.is_available()   #判断GPU是否存在可用
@@ -56,32 +57,68 @@ def load_and_concat_npz(folder,
                         y_key='y',
                         sort_files=True,
                         verbose=False):
-    index = np.array([])
-    num = 0
+    """
+    1) 先在本地找 *.npz
+    2) 如果没找到，就用 GitHub API 自动下载到本地，再继续读取
+    """
+
+    # 本地查找
     pattern = os.path.join(folder, '*.npz')
     files = glob.glob(pattern)
     if not files:
-        raise FileNotFoundError(f"No .npz files found in {folder}")
+        # ─────── 本地没有 npz，尝试从 GitHub 仓库下载 ───────
+        print(f"[!] 本地未发现 .npz，开始从 GitHub 下载到 {folder}/ …")
+        # GitHub API 列出目录
+        api_url = (
+            "https://api.github.com/repos/"
+            "HolyUncleLi/TestInterpretTrainer"
+            "/contents/SleepEdfData/SCDataset/data"
+        )
+        os.makedirs(folder, exist_ok=True)
+        r = requests.get(api_url)
+        r.raise_for_status()
+        for info in r.json():
+            name = info.get("name", "")
+            if name.endswith(".npz"):
+                dl_url = info["download_url"]
+                print(f"    ↓ 下载 {name} …")
+                data = requests.get(dl_url).content
+                with open(os.path.join(folder, name), "wb") as fp:
+                    fp.write(data)
+        # 下载完毕后再 glob 一次
+        files = glob.glob(pattern)
+        if not files:
+            raise FileNotFoundError(f"下载后依然找不到 .npz，请检查 GitHub 目录或网络：{pattern}")
+
     if sort_files:
         files.sort()
 
     xs, ys = [], []
+    index = []
+    num = 0
+
+    # 按文件依次拼接
     for i, fpath in enumerate(files, 1):
-        with np.load(fpath, mmap_mode=None) as data:
+        with np.load(fpath) as data:
             if x_key not in data or y_key not in data:
-                raise KeyError(f"{fpath!r} 中缺少 '{x_key}' 或 '{y_key}'")
-            xs.append(data[x_key])
-            ys.append(data[y_key])
-            index = np.append(index, np.array([num] * data[x_key].shape[0]), axis=0)
+                raise KeyError(f"{fpath} 中缺少 '{x_key}' 或 '{y_key}'")
+            x = data[x_key]
+            y = data[y_key]
+            xs.append(x)
+            ys.append(y)
+            # 记录每条样本属于哪个 npz 文件
+            index.extend([num] * x.shape[0])
             num += 1
         if verbose:
             print(f"[{i}/{len(files)}] loaded {os.path.basename(fpath)}, "
-                  f"x shape={xs[-1].shape}, y shape={ys[-1].shape}")
+                  f"x shape={x.shape}, y shape={y.shape}")
 
-    # 按第 0 维度拼接
     x_all = np.concatenate(xs, axis=0)
     y_all = np.concatenate(ys, axis=0)
+    index = np.array(index, dtype=int)
+
     return x_all, y_all, index
+
 
 def getEEGData_withoutSeq(h5file, filesname, channel):
     data = np.empty(shape=[0, 3000])
@@ -96,6 +133,7 @@ def getEEGData_withoutSeq(h5file, filesname, channel):
     labels = labels.squeeze(dim=1)
     return data, labels
 
+
 def get_seq_data(data, label, seq_len=10):
     datas = []
     labels = []
@@ -105,6 +143,7 @@ def get_seq_data(data, label, seq_len=10):
         # labels.append(label[(i + seq_len) // 2])
         labels.append(label[i])
     return np.array(datas), np.array(labels)
+
 
 ###Normalizing and return t he normalized data and standardscaler
 def standardScalerData(standardscaler, x_data):
