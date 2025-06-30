@@ -22,10 +22,10 @@ LEARNING_RATE = 0.0005
 use_gpu = torch.cuda.is_available()
 
 folder = "./SleepEdfData/SCDataset/data"
-h5file = "./SleepEdfData/SCDataset/data/"
+# h5file = "./SleepEdfData/SCDataset/data/"
 model_path = ""
-files = os.listdir(h5file)
-files_len = len(files)
+# files = os.listdir(h5file)
+# files_len = len(files)
 keys = ["Fpz-Cz", "Pz-Oz", "label"]
 band_name = ['delta', 'theta', 'alpha', 'sigma', 'beta']
 '''
