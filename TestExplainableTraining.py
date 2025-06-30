@@ -18,7 +18,7 @@ EPOCH = 200
 BATCH_SIZE = 64
 seq_len = 1
 
-LEARNING_RATE = 0.0005
+LEARNING_RATE = 0.001
 use_gpu = torch.cuda.is_available()
 
 folder = "./SleepEdfData/SCDataSet/data/"
@@ -92,7 +92,6 @@ if __name__ == '__main__':
                                                          torch.tensor(y_train).squeeze())
                 data_loader = Data.DataLoader(dataset=torch_dataset_train, batch_size=BATCH_SIZE, shuffle=False,
                                               drop_last=True,num_workers=1)
-
                 test_dataset = Data.TensorDataset(torch.tensor(x_test),
                                                   torch.tensor(y_test).squeeze())
                 test_dataLoader = Data.DataLoader(dataset=test_dataset, batch_size=BATCH_SIZE, shuffle=False,

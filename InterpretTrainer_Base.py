@@ -8,6 +8,7 @@ import torch.nn.functional as F
 import warnings
 from scipy.interpolate import interp1d
 import logging
+import gc
 
 
 Batch_Size = 64
@@ -56,7 +57,7 @@ def grad_cam(model, x):
     # print("features mean shape: ", len(features), features_mean.shape)
 
     # weights = np.mean(gradients, axis=1)
-    weights = gradients[np.newaxis,:]
+    weights = gradients[np.newaxis, :]
     # print("weights shape: ",weights.shape)
     # cam = np.sum(weights[:, np.newaxis] * x.detach().numpy()[0, 0], axis=0)
     '''
@@ -228,6 +229,7 @@ def trainModle_interpret(model, lossname, optimizername, data_loader, EPOCH, ind
     maxAcc = 0
 
     hook = model.embed.register_forward_hook(hook_fn)
+    A = torch.randint(1, 2, (Batch_Size, 3000)).float().cuda()
 
     logging.basicConfig(
         level=logging.INFO,
@@ -245,11 +247,10 @@ def trainModle_interpret(model, lossname, optimizername, data_loader, EPOCH, ind
             train_x = train_x.cuda()
             train_x.requires_grad_(True)  # ← 关键：确保它可求导
             train_y = torch.squeeze(train_y.view(-1,)).type(torch.LongTensor).cuda()
-            A = torch.randint(1, 2, (Batch_Size, 3000)).float().cuda()
 
-            # loss, loss_ce, loss_explanation = custom_loss(model, train_x, train_y, A, lambda_explanation=1.0)
-            logits = model(train_x.view(Batch_Size, seq_len, 3000))  # (batch_size, num_classes)
-            loss = lossname(logits, train_y)
+            loss, loss_ce, loss_explanation = custom_loss(model, train_x, train_y, A, lambda_explanation=1.0)
+            # logits = model(train_x.view(Batch_Size, seq_len, 3000))  # (batch_size, num_classes)
+            # loss = lossname(logits, train_y)
 
             total_loss += loss
 
@@ -276,6 +277,7 @@ def trainModle_interpret(model, lossname, optimizername, data_loader, EPOCH, ind
                 label_y_list.extend(test_y.cpu())
 
             report_acc = classification_report(pred_y_list, label_y_list, digits=6, output_dict=True)['accuracy']
+            '''
             if report_acc > maxAcc:
                 maxAcc = report_acc
                 best_model = model
@@ -283,17 +285,24 @@ def trainModle_interpret(model, lossname, optimizername, data_loader, EPOCH, ind
                 torch.cuda.empty_cache()
                 torch.save(best_model.state_dict(), './result/models/%d.pth' % (index + 1))
                 print('saved model')
-
-            # print("index: ", index, " | epoch: ", epoch, " | val acc: ", report_acc, " | avg loss: ", )
+            '''
+            print("index: ", index, " | epoch: ", epoch, " | val acc: ", report_acc, " | avg loss: ", (total_loss/5).item())
+            '''
             logging.info(
                 f"idx {index:<2d} | "
                 f"epoch {epoch:<3d} | "
                 f"val_acc {report_acc:.4f} | "
                 f"avg_loss {(total_loss/5).item():.4f}"
             )
+            '''
             with open("./result/models/train_acc_curve.txt", "a", encoding="utf-8") as file:
                 file.write(str(report_acc)+'\n')
+
             total_loss = 0
+
+        del train_x, train_y, loss, loss_ce, loss_explanation
+        torch.cuda.empty_cache()
+        gc.collect()
 
     model.eval()
     pred_y_list = []
