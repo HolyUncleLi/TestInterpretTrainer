@@ -3,7 +3,7 @@ import torch.linalg
 import sklearn
 import gc
 import shap
-
+import glob
 from InterpretTrainer_Base import *
 from AttnBaseModel_InterpretTrain import MainModel, FeatureProcess, Head
 
@@ -21,6 +21,7 @@ seq_len = 1
 LEARNING_RATE = 0.0005
 use_gpu = torch.cuda.is_available()
 
+folder = "./SleepEdfData/SCDataset/data"
 h5file = "./SleepEdfData/SCDataset/data/"
 model_path = ""
 files = os.listdir(h5file)
@@ -41,8 +42,9 @@ if __name__ == '__main__':
     index = 0
 
     kf = sklearn.model_selection.GroupKFold(n_splits=kfold)
-    eeg_data, labels, groups = getEEGData_group(h5file, files, channel=0)
-    print("groups : ", len(groups), groups)
+    # eeg_data, labels, groups = getEEGData_group(h5file, files, channel=0)
+    eeg_data, labels, groups = load_and_concat_npz(folder)
+    # print("groups : ", len(groups), groups)
 
     count_preClass = checkDataset(labels)
     classWeight = [1,1.5,1,1,1]
@@ -52,6 +54,7 @@ if __name__ == '__main__':
     print('label size: ',labels.shape)
     print('count pre class: ', count_preClass)
     print("weight pre class: ", classWeight)
+    print('group: ', groups)
     print('>>>')
 
     # for train_index, test_index in kf.split(eeg_data):
@@ -100,6 +103,8 @@ if __name__ == '__main__':
             else:
                 print('cant find gpu!!!')
 
+            # 一折
+            break
             # 分别读取模型
             ftcnn_state = {k[len("feature_process."):]: v for k, v in model.state_dict().items() if k.startswith("feature_process.")}
             classhead_state = {k[len("classifier."):]: v for k, v in model.state_dict().items() if k.startswith("classifier.")}

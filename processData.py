@@ -8,6 +8,8 @@ import h5py
 import torch.utils.data as Data
 import pandas as pd
 import random
+import glob
+
 
 use_gpu = torch.cuda.is_available()   #判断GPU是否存在可用
 keys = ["Fpz-Cz", "Pz-Oz", "label"]
@@ -47,6 +49,39 @@ def getEEGData_group(h5file, filesname, channel, seq_len=10):
     labels = (torch.from_numpy(labels)).type('torch.LongTensor')
     labels = labels.squeeze(dim=1)
     return data, labels, index
+
+
+def load_and_concat_npz(folder,
+                        x_key='x',
+                        y_key='y',
+                        sort_files=True,
+                        verbose=False):
+    index = np.array([])
+    num = 0
+    pattern = os.path.join(folder, '*.npz')
+    files = glob.glob(pattern)
+    if not files:
+        raise FileNotFoundError(f"No .npz files found in {folder}")
+    if sort_files:
+        files.sort()
+
+    xs, ys = [], []
+    for i, fpath in enumerate(files, 1):
+        with np.load(fpath, mmap_mode=None) as data:
+            if x_key not in data or y_key not in data:
+                raise KeyError(f"{fpath!r} 中缺少 '{x_key}' 或 '{y_key}'")
+            xs.append(data[x_key])
+            ys.append(data[y_key])
+            index = np.append(index, np.array([num] * data[x_key].shape[0]), axis=0)
+            num += 1
+        if verbose:
+            print(f"[{i}/{len(files)}] loaded {os.path.basename(fpath)}, "
+                  f"x shape={xs[-1].shape}, y shape={ys[-1].shape}")
+
+    # 按第 0 维度拼接
+    x_all = np.concatenate(xs, axis=0)
+    y_all = np.concatenate(ys, axis=0)
+    return x_all, y_all, index
 
 def getEEGData_withoutSeq(h5file, filesname, channel):
     data = np.empty(shape=[0, 3000])
