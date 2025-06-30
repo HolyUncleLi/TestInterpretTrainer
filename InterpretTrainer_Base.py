@@ -132,8 +132,8 @@ def custom_loss(model, x, target, A, lambda_explanation=1000.0):
     loss_explanation = lambda_explanation * (A * gradients.pow(2)).sum() / x.size(0)
 
     # 总损失为交叉熵损失和解释正则项之和
-    # loss_total = loss_ce + loss_explanation
-    loss_total = loss_ce
+    loss_total = loss_ce + loss_explanation
+    # loss_total = loss_ce
 
     return loss_total, loss_ce, loss_explanation
 

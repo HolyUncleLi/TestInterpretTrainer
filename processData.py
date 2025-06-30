@@ -57,10 +57,6 @@ def load_and_concat_npz(folder,
                         y_key='y',
                         sort_files=True,
                         verbose=False):
-    """
-    1) 先在本地找 *.npz
-    2) 如果没找到，就用 GitHub API 自动下载到本地，再继续读取
-    """
 
     # 本地查找
     pattern = os.path.join(folder, '*.npz')
@@ -72,7 +68,7 @@ def load_and_concat_npz(folder,
         api_url = (
             "https://api.github.com/repos/"
             "HolyUncleLi/TestInterpretTrainer"
-            "/contents/SleepEdfData/SCDataset/data"
+            "/SleepEdfData/SCDataset/data"
         )
         os.makedirs(folder, exist_ok=True)
         r = requests.get(api_url)
